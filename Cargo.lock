@@ -3,5 +3,14 @@
 version = 3
 
 [[package]]
+name = "bootloader"
+version = "0.10.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24e13520aa8580a2850fc9f5390dc6753f1062fb66f90e5a61bd5c72b55df731"
+
+[[package]]
 name = "katsuragi_os"
 version = "0.1.0"
+dependencies = [
+ "bootloader",
+]
