@@ -5,6 +5,24 @@ use volatile::Volatile;
 //Utilities for formatting and printing strings.
 use core::fmt;
 
+//A Global Interface
+//interface from other modules without carrying a Writer
+
+use lazy_static::lazy_static;
+//spinlocks is a lock that causes a thread trying to acquire it to simply wait in a loop
+use spin::Mutex;
+lazy_static! {
+    pub static ref  WRITER: Mutex<Writer> = Mutex::new(Writer {
+        column_position: 0,
+        color_code: ColorCode::new(Color::Cyan , Color::Black),
+        buffer: unsafe {
+            //mutable raw pointer
+            &mut *(0xb8000 as *mut Buffer)
+        },
+    });
+}
+
+
 //Colors
 #[allow(dead_code)] //instruct the Rust compiler
 #[derive(Debug, Clone, Copy, PartialEq, Eq)] 
@@ -42,7 +60,7 @@ impl ColorCode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
 struct  ScreenChar{
-    ascii_charater: u8,
+    ascii_character: u8,
     color_code: ColorCode,
 }
 
@@ -51,7 +69,7 @@ const BUFFER_WIDTH: usize = 80;
 
 #[repr(transparent)]
 struct Buffer {
-    char: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
+    chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 
 
@@ -63,6 +81,7 @@ pub struct Writer{
 
 //Printing
 impl Writer {
+    //write buffer to byte
     pub fn write_byte(&mut self, byte: u8){
         match byte {
             b'\n' => self.new_line(),
@@ -76,15 +95,16 @@ impl Writer {
 
                 let color_code = self.color_code;
                 //using the write method
-                self.buffer.char[row][col].write(ScreenChar{
-                    ascii_charater: byte,
+                self.buffer.chars[row][col].write(ScreenChar{
+                    ascii_character: byte,
                     color_code,
                 });
                 self.column_position += 1;
             }
         }
     }
-
+    
+    // Writes the given ASCII string to the buffer.
     pub fn writing_string(&mut self, s: &str){
         for byte in s.bytes(){
             match byte {
@@ -94,34 +114,32 @@ impl Writer {
             }
         }
     }
-
     fn new_line(&mut self) {
         for row in 1..BUFFER_HEIGHT{
             for col in 0..BUFFER_WIDTH{
-                let charater = self.buffer.char[row][col].read();
+                let character = self.buffer.chars[row][col].read();
                 //iterate over all the screen characters and move each character one row up.
-                self.buffer.char[row - 1][col].write(charater)
+                self.buffer.chars[row - 1][col].write(character)
             }
         }
         self.clear_row(BUFFER_HEIGHT - 1);
         self.column_position = 0;
-
+    }
     fn clear_row(&mut self, row: usize){
         // method : set all char with space char
         let blank = ScreenChar{
-            ascii_charater:b' ',
+            ascii_character: b' ',
             color_code: self.color_code,
-            };
+        };
 
         for col in 0..BUFFER_WIDTH{
             self.buffer.chars[row][col].write(blank);
-            }
         }
     }
 }
 
 //create a temporary function to write some characters to the screen,
-pub fn print_somthing(){
+/*pub fn print_somthing(){
     let mut writer = Writer{
         column_position: 0,
         color_code: ColorCode::new(Color::Cyan , Color::Black),
@@ -135,29 +153,32 @@ pub fn print_somthing(){
     writer.writing_string("Welcöme to KatsuragiOS");
     //returns a Result need to unwrap to get var
     write!(writer,"This is on vga text mode  lesson {} {}",42.6969, 1.0/3.0 ).unwrap();
-}
+}*/
 
 //rust support formatting macross easily to print different types
 impl fmt::Write for Writer {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.write_str(s);
+        self.writing_string(s);
         //Ok(()) is just a Ok Contains the success value
         Ok(())
     }
 }
 
-//A Global Interface
-//interface from other modules without carrying a Writer
+//Macro
 
-use lazy_static::lazy_static;
+#[macro_export]
+macro_rules! println {
+    () => (print!("\n"));
+    ($($arg:tt)*) => (print!("{}\n", format_args!($($arg)*)));
+}
 
-lazy_static! {
-    pub static  WRITER: Writer = Writer{
-        column_position: 0,
-        color_code: ColorCode::new(Color::Cyan , Color::Black),
-        buffer: unsafe {
-            //mutable raw pointer
-            &mut *(0xb8000 as *mut Buffer)
-        },
-    };
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => ($crate::vga_buffer::_print(format_args!($($arg)*)));
+}
+
+#[doc(hidden)]
+pub fn _print(args: fmt::Arguments) {
+    use core::fmt::Write;
+    WRITER.lock().write_fmt(args).unwrap();
 }
