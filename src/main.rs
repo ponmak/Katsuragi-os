@@ -23,7 +23,7 @@ pub extern "C" fn _start() -> ! {
     vga_buffer::WRITER.lock().wirte_str("").unwrap();
     write!(vga_buffer::WRITER.lock(), "{}",42.6969).unwarp();*/
 
-    println!("Welcöme to KatsuragiOS");
+    println!("Welcome to KatsuragiOS");
     panic!("(!) hil kai");
     loop {}
 }
