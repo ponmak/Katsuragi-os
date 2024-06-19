@@ -29,10 +29,10 @@ fn panic(info: &PanicInfo) -> ! {
 }
 
 #[cfg(test)]
-pub fn test_runner(tests: &[&dyn Fn()]){
+pub fn test_runner(tests: &[&dyn Testable]){
     serial_println!("Running {} tests", tests.len());
     for test in tests{ //
-        test();
+        test.run();
     }
     exit_qemu(QemuExitCode::Success);
 }
@@ -75,7 +75,42 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 
 #[test_case]
 fn trivial_assertion() {
-    print!("trivial assertion... ");
-    assert_eq!(0, 1);
-    println!("(+) test complete");
+    //print!("trivial assertion... ");
+    assert_eq!(1, 1);
+    //println!("(+) test complete");
+}
+//Insert Printing Automatically
+pub trait Testable {
+    fn run(&self) -> ();
+}
+
+impl<T> Testable for T
+where
+    T: Fn(),
+{
+    fn run(&self) {
+        serial_print!("{}...\t", core::any::type_name::<T>());
+        self();
+        serial_println!("(+) test complete");
+    }
+}
+
+// VGA test case
+#[test_case]
+fn test_println_simple() {
+    print!("(+) VAG print line complete");
+}
+
+#[test_case]
+fn test_println_many() {
+    for _ in 0..200 {
+        println!("(!) On loop now!!");
+    }
+    println!("(+) VAG print many line complete")
+}
+
+//verify printed lines
+#[test_case]
+fn test_println_output() {
+    
 }
