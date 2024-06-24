@@ -7,6 +7,8 @@
 
 use core::panic::PanicInfo;
 
+use vga_buffer::WRITER;
+
 mod vga_buffer;
 mod serial;
 
@@ -93,24 +95,4 @@ where
         self();
         serial_println!("(+) test complete");
     }
-}
-
-// VGA test case
-#[test_case]
-fn test_println_simple() {
-    print!("(+) VAG print line complete");
-}
-
-#[test_case]
-fn test_println_many() {
-    for _ in 0..200 {
-        println!("(!) On loop now!!");
-    }
-    println!("(+) VAG print many line complete")
-}
-
-//verify printed lines
-#[test_case]
-fn test_println_output() {
-    
 }

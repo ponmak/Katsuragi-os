@@ -182,3 +182,28 @@ pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
     WRITER.lock().write_fmt(args).unwrap();
 }
+
+// VGA test case
+#[test_case]
+fn test_println_simple() {
+    print!("(+) VAG print line complete");
+}
+
+#[test_case]
+fn test_println_many() {
+    for _ in 0..200 {
+        println!("(!) On loop now!!");
+    }
+    println!("(+) VAG print many line complete")
+}
+
+//verify printed lines
+#[test_case]
+fn test_println_output() {
+    let _str = "(!) fit string on single line";
+    println!("{}", _str);
+    for (i,c) in _str.chars().enumerate() {
+        let screen_char = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i].read();
+        assert_eq!(char::from(screen_char.ascii_character), c);
+    }
+}
