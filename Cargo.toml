@@ -23,4 +23,5 @@ test-timeout = 300 # in second
 
 [[test]] # tell complier that need to fail
 name = "should_panic"
+path = "test/should_panic.rs"
 harness = false
